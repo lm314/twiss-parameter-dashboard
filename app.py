@@ -1,9 +1,13 @@
 import plotly.express as px
+import plotly.graph_objects as go
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output
 #import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
+from scipy.stats.qmc import Halton,Sobol
+from scipy.stats import norm
+from typing import Callable
 
 import numpy as np
 #import matplotlib.pyplot as plt
@@ -12,21 +16,32 @@ import pandas as pd
 load_figure_template("solar")
 
 class Twiss:
-  def __init__(self, alpha: float, beta: float, emit: float):
-    self.alpha = alpha
-    self.beta = beta
-    self.emit = emit
+    def __init__(self, alpha: float, beta: float, emit: float):
+        self.alpha = alpha
+        self.beta = beta
+        self.emit = emit
 
-  def __str__(self):
-    return f"alpha={self.alpha}\nbeta={self.beta}\nemit={self.emit}"
+    def __str__(self):
+        return f"alpha={self.alpha}\nbeta={self.beta}\nemit={self.emit}"
+
+    def rms_space(self):
+        return np.sqrt(self.emit*self.beta)
+    
+    def rms_angle_waist(self):
+        return np.sqrt(self.emit/self.beta)
+    
+    def gamma(self):
+        return (1+self.alpha**2)/self.beta
 
 def ellipse_twiss(twiss_paramters: Twiss, num_points: int = 1000):
-    rmsX = np.sqrt(twiss_paramters.emit/twiss_paramters.beta);
-    rmsTheta = np.sqrt(twiss_paramters.emit*twiss_paramters.beta);
+    # rmsX = np.sqrt(twiss_paramters.emit/twiss_paramters.beta);
+    # rmsTheta = np.sqrt(twiss_paramters.emit*twiss_paramters.beta);
+    rmsX = twiss_paramters.rms_space();
+    rmsTheta = twiss_paramters.rms_angle_waist();
     
     m = -twiss_paramters.alpha/twiss_paramters.beta
-    b = rmsX
-    a = rmsTheta
+    b = rmsTheta
+    a = rmsX
     t = np.linspace(0,2*np.pi,num_points)
     x = a*np.cos(t)
     y = b*np.sin(t)
@@ -34,7 +49,55 @@ def ellipse_twiss(twiss_paramters: Twiss, num_points: int = 1000):
     y = y.transpose()
     y = y + x*m
     
-    return (x,y)
+    return x,y
+
+def gen_halton_gaussian_4d(twiss_x,twiss_y,num,seed=1,dim=4,loc=[0,0,0,0]):
+    rmsX = twiss_x.rms_space();
+    rmsThetaX = twiss_x.rms_angle_waist();
+    rmsY = twiss_y.rms_space();
+    rmsThetaY = twiss_y.rms_angle_waist();    
+    
+    a=Halton(d=dim,seed=seed)
+    vals = a.random(n=num)
+    
+    dist = norm.ppf(vals,loc=loc,scale=[rmsX,rmsThetaX,rmsY,rmsThetaY])
+
+    mx = -twiss_x.alpha/twiss_x.beta
+    my = -twiss_y.alpha/twiss_y.beta;
+    
+    dist[:,1] += dist[:,0]*mx
+    dist[:,3] += dist[:,2]*my
+    
+    return dist
+
+def gen_dist_normal_coord_4d(func: Callable,**kwarg):
+    twiss_x = Twiss(alpha=0,beta=1,emit=1)
+    twiss_y = Twiss(alpha=0,beta=1,emit=1)
+    return func(twiss_x,twiss_y,**kwarg)
+
+def transform_norm_dist(a: np.ndarray,twiss_x: Twiss,twiss_y: Twiss):
+       
+    a_copy = a.copy()
+    
+    twiss_old  = Twiss(alpha=0,beta=1,emit=1)
+    
+    x_scale = twiss_x.rms_space()/twiss_old.rms_space();
+    x_theta_scale = twiss_x.rms_angle_waist()/twiss_old.rms_angle_waist();
+    y_scale = twiss_y.rms_space()/twiss_old.rms_space();
+    y_theta_scale = twiss_y.rms_angle_waist()/twiss_old.rms_angle_waist();  
+    
+    mx = -twiss_x.alpha/twiss_x.beta
+    my = -twiss_y.alpha/twiss_y.beta;
+    
+    a_copy[:,0] *= x_scale
+    a_copy[:,1] *= x_theta_scale
+    a_copy[:,2] *= y_scale
+    a_copy[:,3] *= y_theta_scale
+    
+    a_copy[:,1] += a_copy[:,0]*mx
+    a_copy[:,3] += a_copy[:,2]*my
+    
+    return a_copy
 
 def KE2gamma(KE):
     """Computes the Lorentz Parameter from the kinetic energy
@@ -156,6 +219,8 @@ def make_phase_space_axis_labels(dim,scale_info):
 def transform_value(value):
     return 10 ** value
 
+particle_dist = gen_dist_normal_coord_4d(gen_halton_gaussian_4d,num=10000)
+
 controls_style = {
     # "position": "fixed",
     # "top": 0,
@@ -230,6 +295,9 @@ app.layout = html.Div([
     Input('beta-slider', 'value'),
     Input('kinetic-energy-slider', 'value'))
 def update_plot(emitn,alpha,beta,kinetic_energy):
+    
+    temp_dist = particle_dist.copy()
+    
     emitn = transform_value(emitn)
     beta = transform_value(beta)
     kinetic_energy = transform_value(kinetic_energy)
@@ -237,25 +305,50 @@ def update_plot(emitn,alpha,beta,kinetic_energy):
     gamma0 = KE2gamma(kinetic_energy*1e6)
     beta0 = gamma2beta(gamma0)
     emit = emitn/(beta0*gamma0);
-    
-    temp = Twiss(alpha=alpha,beta=beta,emit=emit*1e-9)
-    x,y = ellipse_twiss(temp)
+        
+    # get twiss ellipse
+    twiss_x = Twiss(alpha=alpha,beta=beta,emit=emit*1e-9)
+    x,y = ellipse_twiss(twiss_x)
     scaleX,scaleY = list(det_plot_scale(pd.DataFrame({'x':x,'xp':y}),cutoff = 0.9).values())
     
-    fig = px.scatter(
-        x=x*10**-scaleX, 
-        y=y*10**-scaleY,
-        width=600, 
-        height=600,
-        render_mode="svg",
-        template="solar")
+    #transform particle distribution to new parameters
+    temp_dist = transform_norm_dist(temp_dist,twiss_x,twiss_x)
     
-    fig.update_layout(xaxis={"title": make_phase_space_axis_labels('x',scaleX)},
-                      yaxis={"title": make_phase_space_axis_labels('xp',scaleY)},
-                      font_size=18)
-        
-    fig.update_layout(transition_duration=500)
-    return fig
+    # fig = px.scatter(
+    #     x=x*10**-scaleX, 
+    #     y=y*10**-scaleY,
+    #     width=600, 
+    #     height=600,
+    #     render_mode="svg",
+    #     template="solar")
+    
+    # fig.update_layout(xaxis={"title": make_phase_space_axis_labels('x',scaleX)},
+    #                   yaxis={"title": make_phase_space_axis_labels('xp',scaleY)},
+    #                   font_size=18,
+    #                   transition_duration=500)
+    
+    trace = go.Scatter(
+        x=x*10**-scaleX,
+        y=y*10**-scaleY,
+        # width=600, 
+        # height=600,
+        # template="solar"
+        marker_color='red',
+        )
+    
+    trace_dist = go.Histogram2d(
+        x=temp_dist[:,0]*10**-scaleX,
+        y=temp_dist[:,1]*10**-scaleY,
+        colorscale="Viridis",
+        nbinsx=51,
+        nbinsy=51,)
+    
+    layout = dict(xaxis={"title": make_phase_space_axis_labels('x',scaleX)},
+                  yaxis={"title": make_phase_space_axis_labels('xp',scaleY)},
+                  font_size=18,
+                  transition_duration=500)
+    # return fig
+    return go.Figure(data=[trace_dist,trace], layout=layout)
 
 @app.callback(
     Output(component_id='emittance-output', component_property='children'),
