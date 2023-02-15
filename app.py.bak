@@ -26,7 +26,7 @@ class Twiss:
     
     def rms_angle_waist(self):
         return np.sqrt(self.emit/self.beta)
-    [
+    
     def gamma(self):
         return (1+self.alpha**2)/self.beta
 
@@ -292,8 +292,6 @@ controls = html.Div([
 app = Dash(__name__,
            external_stylesheets=[dbc.themes.SOLAR],
            external_scripts=["https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" ])
-           
-server = app.server    
 
 app.layout = html.Div([
     dbc.Row([
@@ -494,4 +492,5 @@ def update_kinetic_energy(value):
     return f"Kinetic Energy (MeV): {transform_value(value):.0f}"
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    #app.run_server(debug=True)
+    app.run_server(debug=True)
