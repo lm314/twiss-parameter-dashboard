@@ -26,7 +26,7 @@ class Twiss:
     
     def rms_angle_waist(self):
         return np.sqrt(self.emit/self.beta)
-    [
+    
     def gamma(self):
         return (1+self.alpha**2)/self.beta
 
