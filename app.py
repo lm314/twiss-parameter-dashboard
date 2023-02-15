@@ -1,17 +1,13 @@
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output
-#import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
-from scipy.stats.qmc import Halton,Sobol
+from scipy.stats.qmc import Halton
 from scipy.stats import norm
 from typing import Callable
-
 import numpy as np
-#import matplotlib.pyplot as plt
 import pandas as pd
 
 load_figure_template("solar")
@@ -35,8 +31,6 @@ class Twiss:
         return (1+self.alpha**2)/self.beta
 
 def ellipse_twiss(twiss_paramters: Twiss, num_points: int = 1000):
-    # rmsX = np.sqrt(twiss_paramters.emit/twiss_paramters.beta);
-    # rmsTheta = np.sqrt(twiss_paramters.emit*twiss_paramters.beta);
     rmsX = twiss_paramters.rms_space();
     rmsTheta = twiss_paramters.rms_angle_waist();
     
@@ -299,19 +293,6 @@ app = Dash(__name__,
            external_stylesheets=[dbc.themes.SOLAR],
            external_scripts=["https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" ])
 
-# app.layout = html.Div([
-#     dbc.Row([
-#         dbc.Col(html.H1('Exploring Twiss Parameters'), style = {'marginLeft':'7px','marginTop':'1rem','marginBottom':'1rem','textAlign':'center'})
-#         ]),
-#     dbc.Row([
-#         dbc.Col(html.Div(dcc.Graph(id = 'graph'),style = {'marginLeft':'15px', 'marginTop':'15px', 'marginRight':'15px'}),
-#                 style={'textAlign':'center','display': 'flex',"justifyContent": "center"})
-#         ]),
-#     dbc.Row([
-#         dbc.Col(controls)
-#         ])
-# ])
-
 app.layout = html.Div([
     dbc.Row([
         dbc.Col(html.H1('Exploring Twiss Parameters'), style = {'marginLeft':'7px','marginTop':'1rem','marginBottom':'1rem','textAlign':'center'})
@@ -511,4 +492,5 @@ def update_kinetic_energy(value):
     return f"Kinetic Energy (MeV): {transform_value(value):.0f}"
 
 if __name__ == '__main__':
+    #app.run_server(debug=True)
     app.run_server(debug=True)
