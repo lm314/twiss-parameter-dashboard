@@ -28,7 +28,7 @@ Of note is that $\alpha$ is related to the correlation between phase space and a
 
 $$
 \begin{aligned} 
-\bm{\Sigma_x} = \bm{Cov(x,x^{\prime})} 
+\Sigma_x = Cov(x,x^{\prime})
     =
     \epsilon 
     \begin{pmatrix}
