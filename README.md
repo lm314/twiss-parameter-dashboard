@@ -5,7 +5,7 @@ This repository is for an interactive dashboard that can be found [here](https:/
 We can approximate particle distributions as 3 separate space-angle pairs, which do not have correlation between them: i.e. ($x$, $x^{\prime}$) and ($y$, $y^{\prime}$) and ($z$, $\delta$) where $x^{\prime}=\frac{dx}{dz}=\frac{v_x}{v_z}\approx\theta_x$ and $\delta=\frac{E-E_{mean}}{E_{mean}}$ with E the energy. For most beamlines, linear optics are sufficient to describe the processes in an accelerator, particularly at high energies, so we primarily deal with linear correlations in these phase-space pairs. As particle bunches can be made of millions or more particles, we simplify the mathematics by taking the RMS ellipse of the distribution.
 
 <br>
-<p align='center'><img src='.\images\PhaseSpaceEllipse.png' height=500></p>
+<p align='center'><img src='images/PhaseSpaceEllipse.png' height=500></p>
 <p align='center'><em>Particle distribution overlayed with its RMS phase space ellipse.</em></p>
 <br>
 
@@ -20,7 +20,7 @@ $$
 where the two independent Twiss parameters are $\alpha$ and $\beta$ and the geometric emittance is $\epsilon$. The third Twiss parameter $\gamma$ is a combination of the first two and is given by $\gamma=\frac{1+\alpha^2}{\beta}$. We can see how the Twiss parameters relate to quantities in the RMS ellipse in the image below:
 
 <br>
-<p align='center'><img src='.\images\PhaseSpaceTwissParameterMeaning.png' height=500></p>
+<p align='center'><img src='images/PhaseSpaceTwissParameterMeaning.png' height=500></p>
 <p align='center'><em>Phase Space Ellipse and its relationship to the Twiss parameters.</em></p>
 <br>
 
