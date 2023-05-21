@@ -416,12 +416,24 @@ def update_plot(emitn_x,emitn_y,alpha_x,alpha_y,beta_x,beta_y,kinetic_energy):
                      title_standoff = y_standoff)
     
     # ------------------real space image-------------------------------
+    # determine common scale for x and y real space dimensions
+    scale_real = np.min([scalex_x,scalex_y])
+    
+    #determine the maximum and minimum extent of the final plot
+    H, xedges, yedges = np.histogram2d(temp_dist[:,0], temp_dist[:,2], bins=51)
+    xedges = xedges*10**-scale_real
+    yedges = yedges*10**-scale_real
+    real_space_min = np.min(np.concatenate((xedges,yedges)))
+    real_space_max = np.max(np.concatenate((xedges,yedges)))
+    
     trace_image = go.Histogram2d(
-        x=temp_dist[:,0]*10**-scalex_x,
-        y=temp_dist[:,2]*10**-scalex_y,
+        x=temp_dist[:,0]*10**-scale_real,
+        y=temp_dist[:,2]*10**-scale_real,
         colorscale="Viridis",
         nbinsx=51,
         nbinsy=51,
+        xbins=dict(start=real_space_min,end=real_space_max),
+        ybins=dict(start=real_space_min,end=real_space_max),
         showscale=False,
         hoverinfo='skip',)
     
